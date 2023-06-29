@@ -117,10 +117,7 @@ func (r *execResponse) value(rowIdx int, colIdx int) (any, error) {
 }
 
 func (ws *websocketConn) exec(ctx context.Context, sql string, sqlParams params, wantRows bool) (*execResponse, error) {
-	deadline, _ := ctx.Deadline()
-	timeout := time.Until(deadline)
-	halfTimeout := timeout / 2
-	ctx, cancel := context.WithTimeout(context.Background(), halfTimeout)
+	ctxx, cancel := context.WithTimeout(context.Background(), 1 * time.Second)
 	defer cancel()
 	requestId := ws.idPool.Get()
 	defer ws.idPool.Put(requestId)
@@ -154,7 +151,7 @@ func (ws *websocketConn) exec(ctx context.Context, sql string, sqlParams params,
 		}
 		stmt["named_args"] = args
 	}
-	err := wsjson.Write(ctx, ws.conn, map[string]interface{}{
+	err := wsjson.Write(ctxx, ws.conn, map[string]interface{}{
 		"type":       "request",
 		"request_id": requestId,
 		"request": map[string]interface{}{
@@ -169,7 +166,7 @@ func (ws *websocketConn) exec(ctx context.Context, sql string, sqlParams params,
 	}
 
 	var resp interface{}
-	if err = wsjson.Read(ctx, ws.conn, &resp); err != nil {
+	if err = wsjson.Read(ctxx, ws.conn, &resp); err != nil {
 		ws.isClosed = true
 		return nil, err
 	}
