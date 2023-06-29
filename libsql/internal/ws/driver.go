@@ -3,6 +3,7 @@ package ws
 import (
 	"context"
 	"database/sql/driver"
+	"fmt"
 	"io"
 	"sort"
 )
@@ -172,9 +173,12 @@ func convertArgs(args []driver.NamedValue) params {
 
 func (c *conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	res, err := c.ws.exec(ctx, query, convertArgs(args), false)
+	fmt.Println("err from exec function: ", err)
+	fmt.Println("is websocket closed: ", c.ws.isClosed)
 	if err != nil {
 		switch {
 		case c.ws.isClosed:
+			fmt.Println("re-connecting")
 			return execContextRetryOne(c, ctx, query, args)
 		default:
 			return nil, err
@@ -185,9 +189,12 @@ func (c *conn) ExecContext(ctx context.Context, query string, args []driver.Name
 
 func (c *conn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
 	res, err := c.ws.exec(ctx, query, convertArgs(args), true)
+	fmt.Println("err from exec function: ", err)
+	fmt.Println("is websocket closed: ", c.ws.isClosed)
 	if err != nil {
 		switch {
 		case c.ws.isClosed:
+			fmt.Println("re-connecting")
 			return queryContextRetryOne(c, ctx, query, args)
 		default:
 			return nil, err
